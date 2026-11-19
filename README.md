@@ -153,6 +153,8 @@ pnpm run deploy:worker
 | `DB_DRIVER` | `auto` | 可选 `auto` / `blob` / `cfkv` / `kv` / `d1` / `do` / `mysql` |
 | `DB_CIPHER` | `none` | 敏感字段落盘算法，如 `aes-256-gcm` |
 
+> **Cloudflare Workers 使用 MySQL**：创建 Cloudflare Hyperdrive 并在 `wrangler.jsonc` 中绑定名为 `HYPERDRIVE` 的配置，然后设置 `DB_DRIVER=mysql`（或保持 `auto` 自动探测）。无需暴露 MySQL 凭据给 Worker；Node 自托管仍可使用 `MYSQL_URLS` / `MYSQL_*`。
+
 
 
 完整环境变量，请参阅[配置变量](https://doc.oplist.org/ecosystem/official_worker/guide_env)

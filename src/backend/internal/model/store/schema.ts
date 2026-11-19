@@ -409,6 +409,11 @@ function sqlType(col: ColumnDef, dialect: "sqlite" | "mysql"): string {
     case "bool":
       return dialect === "mysql" ? "TINYINT(1)" : "INTEGER"
     case "string":
+      // MySQL 不允许直接对 TEXT/BLOB 列建主键或唯一索引（必须指定前缀长度）。
+      // 字符串主键/唯一列改用 VARCHAR(512)，足够覆盖路径、用户名与设置键，
+      // 且在 utf8mb4 下 512*4=2048 字节仍低于 InnoDB 3072 字节索引上限。
+      if (dialect === "mysql" && (col.pk || col.unique)) return "VARCHAR(512)"
+      return "TEXT"
     case "json":
     case "date":
       return "TEXT"

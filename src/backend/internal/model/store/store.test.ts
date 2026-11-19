@@ -211,6 +211,14 @@ test("schema: columnar tables match Go backend structure", () => {
   // DDL 幂等生成（schema_info + 7 张业务表）
   assert.ok(D1_SCHEMA.length >= 8)
   assert.ok(MYSQL_SCHEMA.length >= 8)
+
+  // MySQL 不允许 TEXT 列直接做主键/唯一索引，字符串索引列必须是 VARCHAR
+  const mysqlSettingItems = MYSQL_SCHEMA.find((d) => d.includes("x_setting_items"))
+  assert.ok(mysqlSettingItems?.includes("`key` VARCHAR(512) PRIMARY KEY"))
+  assert.ok(
+    !MYSQL_SCHEMA.some((d) => /\bTEXT\s+(PRIMARY KEY|UNIQUE)\b/.test(d)),
+    "MySQL DDL must not index TEXT columns directly",
+  )
 })
 
 test("schema: SQL table names align with Go GORM naming", () => {

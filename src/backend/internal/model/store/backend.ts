@@ -20,7 +20,7 @@ import { cfkvDriver } from "./driver/cfkv"
 import { checkProxyConfig, kvDriver } from "./driver/kv"
 import { d1Driver } from "./driver/d1"
 import { doDriver } from "./driver/do"
-import { mysqlDriver } from "./driver/mysql"
+import { mysqlDriver, hasHyperdriveBinding } from "./driver/mysql"
 import { memoryDriver } from "./driver/memory"
 import { mapFormat } from "./format/map"
 import { keyFormat } from "./format/key"
@@ -157,7 +157,8 @@ export function isServerlessRuntime(env?: any): boolean {
 /**
  * 自动检测可用的驱动（优先级：mysql → d1 → kv → cfkv → blob → do）。
  *
- * mysql 仅在显式配置连接信息时参与探测（详见 hasMysqlConfig）。
+ * mysql 仅在显式配置了连接信息（或绑定了 Hyperdrive）时参与探测（详见
+ * hasMysqlConfig）。
  *
  * 若全部不可用：
  *  - 本地/容器环境：回退内存（便于开发调试）
@@ -167,8 +168,9 @@ export function isServerlessRuntime(env?: any): boolean {
 async function autoDetectDriver(env?: any): Promise<Driver> {
   // 检测顺序：mysql → d1 → kv → cfkv → blob → do
   //
-  // - mysql 需要网络连接，只有显式配置了连接信息才尝试，否则每次 auto 探测
-  //   都会先尝试建 TCP 连接（失败后继续），在 CF/EO 等边缘环境上纯属浪费。
+  // - mysql 需要网络连接，只有显式配置了连接信息（MYSQL_*）或绑定了
+  //   Cloudflare Hyperdrive 才尝试，否则每次 auto 探测都会先尝试建 TCP 连接
+  //   （失败后继续），在 CF/EO 等边缘环境上纯属浪费。
   // - kv 与 cfkv 同为 KV 语义：优先本地 binding（更直接、更快），
   //   其次才走 Cloudflare REST API。
   const candidates: Driver[] = []
@@ -205,7 +207,7 @@ async function autoDetectDriver(env?: any): Promise<Driver> {
 }
 
 /**
- * 是否显式配置了 MySQL 连接信息。
+ * 是否显式配置了 MySQL 连接信息或 Hyperdrive binding。
  *
  * 用于决定 auto 模式是否尝试 mysql 驱动：MySQL 是网络连接，
  * 无配置时探测会产生无谓的 TCP 建连开销，必须由运维显式声明。
@@ -214,7 +216,8 @@ function hasMysqlConfig(env?: any): boolean {
   const e = env || {}
   const p = typeof process !== "undefined" ? process.env || {} : {}
   return Boolean(
-    e.MYSQL_URLS ||
+    hasHyperdriveBinding(env) ||
+      e.MYSQL_URLS ||
       p.MYSQL_URLS ||
       e.MYSQL_HOST ||
       p.MYSQL_HOST,
@@ -266,7 +269,8 @@ function noStorageHint(env?: any): string {
   if (isCloudflare) {
     return (
       "DB_DRIVER=auto already probed every driver. On Cloudflare Workers, add " +
-      'a binding to wrangler.jsonc: D1 as {"d1_databases":[{"binding":"DB"}]} ' +
+      'a binding to wrangler.jsonc: Hyperdrive as {"hyperdrive":[{"binding":"HYPERDRIVE","id":"..."}]}, ' +
+      'D1 as {"d1_databases":[{"binding":"DB"}]} ' +
       'or KV as {"kv_namespaces":[{"binding":"KV"}]}, then redeploy so the ' +
       "binding is injected."
     )
@@ -289,7 +293,8 @@ export const NO_STORAGE_MESSAGE =
   "  1. EdgeOne Blob (recommended, zero config if the project provides it)\n" +
   "  2. EdgeOne KV: bind a KV namespace to Edge Functions, then set " +
   "DB_DRIVER=kv (DB_FORMAT=map or key) and JWT_SECRET\n" +
-  "  3. Cloudflare KV / D1: bind the namespace and set DB_DRIVER accordingly\n" +
+  "  3. Cloudflare KV / D1 / Hyperdrive: bind the namespace or Hyperdrive " +
+  "configuration and set DB_DRIVER accordingly\n" +
   "Environment variables to set in the project settings:\n" +
   "  DB_DRIVER=blob | kv | cfkv | d1 | do | mysql\n" +
   "  DB_FORMAT=map | key | sql"
@@ -403,9 +408,11 @@ const DRIVER_UNAVAILABLE_HINTS: Record<string, string> = {
     "(wrangler.jsonc: \"durable_objects\": { \"bindings\": [{ \"name\": \"DO\", " +
     "\"class_name\": \"...\" }] } plus a matching migration).\n",
   mysql:
-    "The \"mysql\" driver requires a Node runtime plus connection info " +
+    'The "mysql" driver requires either a Cloudflare Hyperdrive binding named ' +
+    '"HYPERDRIVE" (wrangler.jsonc: "hyperdrive": [{ "binding": "HYPERDRIVE", ' +
+    '"id": "..." }]) on Workers, or a Node runtime plus connection info ' +
     "(MYSQL_URLS, or MYSQL_HOST/MYSQL_PORT/MYSQL_USER/MYSQL_PASS/MYSQL_NAME). " +
-    "Cloudflare Workers cannot open raw TCP connections to MySQL.\n",
+    "Cloudflare Workers cannot open raw TCP connections to MySQL without Hyperdrive.\n",
   blob:
     "The \"blob\" driver requires either the EdgeOne Blob SDK (only present " +
     "inside the EdgeOne Makers runtime) or an ESA_BLOB binding on Alibaba ESA.\n",
