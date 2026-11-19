@@ -126,7 +126,7 @@ importers:
         specifier: github:OpenListTeam/mpegts.js#1e51e0f6f918cf08e05dfae9c7bfcf658d6b4ac2
         version: https://codeload.github.com/OpenListTeam/mpegts.js/tar.gz/1e51e0f6f918cf08e05dfae9c7bfcf658d6b4ac2
       mysql2:
-        specifier: ^3.11.0
+        specifier: ^3.13.0
         version: 3.24.3(@types/node@24.13.3)
       openpgp:
         specifier: ^6.3.1
