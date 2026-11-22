@@ -56,7 +56,7 @@
     //   mysql      - MySQL：Workers 上走 Cloudflare Hyperdrive binding（HYPERDRIVE）；
     //                Node 运行时走 MYSQL_URLS 或 MYSQL_HOST 等（仅 Node 运行时）
     // 说明：mysql 仅在配置了 Hyperdrive binding 或连接信息时才参与 auto 探测，避免无谓的 TCP 建连。
-    "DB_DRIVER": "mysql",
+    "DB_DRIVER": "d1",
 
     // 敏感字段落盘算法（默认 none：不加密；与 DB_DRIVER/DB_FORMAT 正交）：
     //   none（默认）              - 不加密，敏感字段明文落盘
@@ -134,9 +134,9 @@
   //  "kv_namespaces": [{ "binding": "KV" }],
   //
   // ▶ 方案 B：D1（关系型，可与 Go 后端共享库）
-  // "d1_databases": [
-  //   { "binding": "DB", "database_name": "openlist", "database_id": "" }
-  // ],
+  "d1_databases": [
+    { "binding": "DB", "database_name": "openlist", "database_id": "ef01d5bc-a990-41cf-8425-e51e7cc1a892" }
+  ],
   //
   // ▶ 方案 C：Durable Objects（内置 SQLite，强一致）
   //   注意：DO 需要 migrations，且删除成本高，适合单租户部署。
@@ -151,13 +151,13 @@
   // ▶ 方案 D：Cloudflare Hyperdrive（Workers 用外部 MySQL，推荐）
   //   创建后把命令输出的 id 填进来；binding 名称必须是 HYPERDRIVE。
   //   本地调试可加 localConnectionString（见上方说明）。
-  "hyperdrive": [
-    {
-      "binding": "HYPERDRIVE",
-      "id": "089004e317214605a07aed7162ea945a",
-      "localConnectionString": "mysql://cloudflare:pu200207@47.238.30.116:6033/openlist_works_db"
-    }
-  ],
+  // "hyperdrive": [
+  //   {
+  //     "binding": "HYPERDRIVE",
+  //     "id": "089004e317214605a07aed7162ea945a",
+  //     "localConnectionString": "mysql://cloudflare:pu200207@47.238.30.116:6033/openlist_works_db"
+  //   }
+  // ],
   //
   // ▶ 方案 E：R2 对象存储（作为「存储驱动」，与上面的 DB 绑定无关）
   // "r2_buckets": [
